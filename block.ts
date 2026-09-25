@@ -32,3 +32,23 @@ const genesisBlockHash = "816534932c2b7154836da6afc367695e6337db8a921823784c1437
 const genesisBlock: Block = new Block(
     genesisBlockIndex, genesisBlockData, genesisBlockTimestamp, genesisBlockPreviousHash, genesisBlockHash
 );
+
+// for now, use an in-memory js array to store the blockchain
+const blockchain: Block[] = [genesisBlock];
+
+const generateNextBlock = (blockData: string) => {
+    const previousBlock: Block = getLatestBlock();
+    const nextIndex: number = previousBlock.index + 1;
+    const nextTimestamp: number = new Date().getTime() / 1000;
+    const nextData: string = blockData;
+    const nextHash: string = calculateHash(nextIndex, nextData, nextTimestamp, previousBlock.hash);
+
+    const newBlock: Block = new Block(nextIndex, nextData, nextTimestamp, previousBlock.hash, nextHash);
+    blockchain.push(newBlock);
+    return newBlock;
+}
+
+const getLatestBlock = () => {
+    return blockchain[-1];
+}
+
