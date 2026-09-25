@@ -1,3 +1,5 @@
+import { timeStamp } from "node:console";
+
 class Block{
     public index: number; // block number in the chain
     public data: string; // data included in the block
@@ -51,4 +53,55 @@ const generateNextBlock = (blockData: string) => {
 const getLatestBlock = () => {
     return blockchain[-1];
 }
+
+// check block validity:
+// index of the block must be one larger than the previous
+// previousHash of the new block must match the hash of the previous block
+// hash of the block itself must be valid
+
+const isValidNewBlock = (newBlock: Block, previousBlock: Block) => {
+    const newBlockCalculatedHash = calculateHash(newBlock.index, newBlock.data, newBlock.timestamp, newBlock.previousHash);
+    
+    if(newBlock.index !== previousBlock.index + 1){
+        console.log("index invalid");
+        return false;
+    } else if(newBlock.previousHash !== previousBlock.hash){
+        console.log("invalid previousHash");
+    } else if(newBlockCalculatedHash !== newBlock.hash){
+        console.log(typeof newBlock.hash + " " + typeof newBlockCalculatedHash);
+        console.log("invalid hash: " + newBlockCalculatedHash + " " + newBlock.hash);
+        return false;
+    }
+    return true;
+}
+
+// validate the structure of the block
+// a node rejects malformed content sent by a peer
+
+const isValidBlockStructure = (block: Block): boolean => {
+    return typeof block.index === "number"
+        && typeof block.data === "string"
+        && typeof block.timestamp === "number"
+        && (typeof block.previousHash === "string" || block.previousHash === null) // typeof always returns a string - typeof null evaluates to "object"
+        && typeof block.hash === "string";
+}
+
+const isValidChain = (blockchainToValidate: Block[]): boolean => {
+    const isValidGenesis = (block: Block): boolean => {
+        return JSON.stringify(block) === JSON.stringify(genesisBlock);
+    }
+
+    if(!isValidGenesis(blockchainToValidate[0])){
+        return false;
+    }
+
+    for (let i = 1; i < blockchainToValidate.length; i++){
+        if(!isValidNewBlock(blockchainToValidate[i], blockchainToValidate[i-1])){
+            return false;
+        }
+    }
+
+    return true;
+}
+
 
