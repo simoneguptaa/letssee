@@ -36,7 +36,7 @@ const genesisBlock: Block = new Block(
 );
 
 // for now, use an in-memory js array to store the blockchain
-const blockchain: Block[] = [genesisBlock];
+let blockchain: Block[] = [genesisBlock];
 
 const generateNextBlock = (blockData: string) => {
     const previousBlock: Block = getLatestBlock();
@@ -102,6 +102,16 @@ const isValidChain = (blockchainToValidate: Block[]): boolean => {
     }
 
     return true;
+}
+
+const replaceChain = (newBlocks: Block[]) => {
+    if (isValidChain(newBlocks) && newBlocks.length > blockchain.length){
+        console.log("received blockchain is valid. replacing current blockchain with received blockchain");
+        blockchain = newBlocks;
+        // broadcastLatest();
+    } else {
+        console.log("received blockchain invalid");
+    }
 }
 
 
