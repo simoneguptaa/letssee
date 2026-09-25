@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2"
+  }
+}
