@@ -1,5 +1,4 @@
-
-var CryptoJS = require("crypto-js");
+import sha256 from 'crypto-js/sha256.js';
 
 class Block{
     public index: number; // block number in the chain
@@ -49,7 +48,7 @@ const generateNextBlock = (blockData: string) => {
 // the block hash has nothing to do with mining yet, as there is no proof of work problem to solve
 // the deeper/ earlier the block is in a chain, the harder it is to modify it - hashes of all consecutive blocks must be changed
 const calculateHash = (index: number, data: string, timestamp: number, previousHash: string | null) => {
-    return CryptoJS.SHA256(index + data + timestamp + previousHash).toString();
+    return sha256(index + data + timestamp + previousHash).toString();
 }
 const calculateHashForBlock = (block: Block): string => {
     return calculateHash(block.index, block.data, block.timestamp, block.previousHash);
