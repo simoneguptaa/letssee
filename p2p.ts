@@ -9,17 +9,11 @@ const sockets: WebSocket[] = [];
 // a node connects to a new peer - it query's for the latest block
 // when a node encounters a block that has an index larger than the current known block, it either adds the block to its current chain or querys for the full blockchain
 
-enum MessageType {
-    QUERY_CHAINLENGTH = 0,
-    QUERY_ALL = 1,
-    RESPONSE_BLOCKCHAIN = 2
-}
-
 class Message {
-    public type: MessageType;
+    public type: string;
     public data: any;
 
-    constructor(type: MessageType, data: any){
+    constructor(type: string, data: any){
         this.type = type;
         this.data = data;
     }
@@ -63,13 +57,13 @@ const initMessageHandler = (ws: WebSocket) => {
         }
         console.log("received message: " + JSON.stringify(message));
         switch (message.type){
-            case MessageType.QUERY_CHAINLENGTH:
+            case "QUERY_CHAINLENGTH":
                 write(ws, responseLatestMsg());
                 break;
-            case MessageType.QUERY_ALL:
+            case "QUERY_ALL":
                 write(ws, responseChainMsg());
                 break;
-            case MessageType.RESPONSE_BLOCKCHAIN:
+            case "RESPONSE_BLOCKCHAIN":
                 const receivedBlocks: Block[] | null = JSONToObject<Block[]>(message.data);
                 if (receivedBlocks === null){
                     console.log("invalid blocks received: ");
@@ -104,20 +98,20 @@ const broadcast = (message: Message): void => {
 };
 
 const queryChainLengthMsg = (): Message => {
-    return {'type': MessageType.QUERY_CHAINLENGTH, 'data': null};
+    return {'type': "QUERY_CHAINLENGTH", 'data': null};
 }
 
 const queryAllMsg = (): Message => {
-    return {'type': MessageType.QUERY_ALL, 'data': null};
+    return {'type': "QUERY_ALL", 'data': null};
 }
 
 const responseChainMsg = (): Message => {
-    return {'type': MessageType.RESPONSE_BLOCKCHAIN, 'data': JSON.stringify(getBlockchain())}
+    return {'type': "RESPONSE_BLOCKCHAIN", 'data': JSON.stringify(getBlockchain())}
 }
 
 const responseLatestMsg = (): Message => {
     return {
-        'type': MessageType.RESPONSE_BLOCKCHAIN,
+        'type': "RESPONSE_BLOCKCHAIN",
         'data': JSON.stringify([getLatestBlock()])
     }
 }
