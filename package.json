@@ -1,10 +1,12 @@
 {
   "dependencies": {
     "crypto-js": "^4.2.0",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "@types/node": "^26.6.2"
+    "@types/node": "^26.6.2",
+    "@types/ws": "^8.18.1"
   }
 }
