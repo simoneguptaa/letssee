@@ -6,15 +6,24 @@ class Block{
     public timestamp: number;
     public previousHash: string | null; // previous block's hash
     public hash: string; // current block's hash
+    public difficulty: number;
+    public nonce: number;
 
-    constructor(index: number, data: string, timestamp: number, previousHash: string | null, hash: string){
+    constructor(index: number, data: string, timestamp: number, previousHash: string | null, hash: string, difficulty: number, nonce: number){
         this.index = index;
         this.data = data;
         this.timestamp = timestamp;
         this.previousHash = previousHash;
         this.hash = hash;
+        this.difficulty = difficulty;
+        this.nonce = nonce;
     }
 }
+
+const BLOCK_GENERATION_INTERVAL: number = 10; // (in seconds) defines how often a block should be found
+const DIFFICULTY_ADJUSTMENT_INTERVAL: number = 10; // (in blocks) defines how often the difficulty should adjust to the increasing or decreasing network hashrate
+// For every 10 blocks that is generated, we check if the time that took to generate those blocks are > or < the expected time.
+// Expected time: BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL
 
 // genesis block - the first block in the blockchain
 const genesisBlockIndex = 0;
@@ -24,7 +33,7 @@ const genesisBlockPreviousHash: string | null = null;
 const genesisBlockHash = "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7";
 
 const genesisBlock: Block = new Block(
-    genesisBlockIndex, genesisBlockData, genesisBlockTimestamp, genesisBlockPreviousHash, genesisBlockHash
+    genesisBlockIndex, genesisBlockData, genesisBlockTimestamp, genesisBlockPreviousHash, genesisBlockHash, 0, 0
 );
 
 // for now, use an in-memory js array to store the blockchain
@@ -127,6 +136,62 @@ const replaceChain = (newBlocks: Block[]) => {
     } else {
         console.log("received blockchain invalid");
     }
+}
+
+// The Proof of Work puzzle is to find a block hash, that contains a specific number of zeroes as its prefix.
+// The difficulty property defines how many prefixing zeroes the block hash must have.
+// In order to find a hash that satisfies the difficulty, we must be able to calculate different hashes with the same content of the block.
+// This is done by modifying the nonce parameter.
+const hashMatchesDifficulty = (hash: string, difficulty: number): boolean => {
+    const hashInBinary: string = hexToBinary(hash);
+    const requiredPrefix: string = '0'.repeat(difficulty);
+    return hashInBinary.startsWith(requiredPrefix);
+}
+
+// To find a valid block, increase the nonce until a valid hash is obtained.
+const findBlock = (index: number, previousHash: string, timestamp: number, data: string, difficulty: number): Block => {
+    let nonce = 0;
+    while(true){
+        const hash: string = calculateHash(index, previousHash, timestamp, data, difficulty, nonce);
+        if(hashMatchesDifficulty(hash, difficulty)){
+            return new Block(index, data, timestamp, previousHash, hash, difficulty, nonce);
+        }
+        nonce++;
+    }
+}
+
+const getDifficulty = (aBlockchain: Block[]): number => {
+    const latestBlock: Block = aBlockchain[blockchain.length - 1];
+    if(latestBlock.index % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 && latestBlock.index !== 0){
+        return getAdjustedDifficulty(latestBlock, aBlockchain);
+    } else {
+        return latestBlock.difficulty;
+    }
+}
+
+const getAdjustedDifficulty = (latestBlock: Block, aBlockchain: Block[]): number => {
+    const prevAdjustmentBlock: Block = aBlockchain[blockchain.length - DIFFICULTY_ADJUSTMENT_INTERVAL];
+    const timeExpected: number = BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL;
+    const timeTaken: number = latestBlock.timestamp - prevAdjustmentBlock.timestamp;
+    
+    if(timeTaken < timeExpected / 2){ // Time taken is 2 times smaller than expected. Increase the difficulty.
+        return prevAdjustmentBlock.difficulty + 1;
+
+    } else if(timeTaken > timeExpected * 2){ // Time taken is 2 times greater than expected. Decrease the difficulty.
+        return prevAdjustmentBlock.difficulty - 1;
+
+    } else { // Best case: time taken matches exactly the time expected. CHECK: hashrate matches exactly the current difficulty.
+        return prevAdjustmentBlock.difficulty;
+    }
+}
+
+// Timestamp validation: to mitigate the attack where a false timestamp is introduced in order to manipulate the difficulty
+const isValidTimestamp = (newBlock: Block, previousBlock: Block): boolean => {
+    // A block is valid if its timestamp is atmost 1 min in the future from the current time.
+    // obtaining a block with a timestamp from the future - different computers participating in the blockchain will read different times.
+    // A block in the chain is valid, if the timestamp is at most 1 min in the past of the previous block.
+    // (A new block's timestamp cannot be 60 seconds or more behind the previous block's timestamp.)
+    return (newBlock.timestamp < getCurrentTimestamp() + 60) && (newBlock.timestamp < previousBlock.timestamp - 60 );
 }
 
 export {Block, getBlockchain, getLatestBlock, generateNextBlock, isValidBlockStructure, replaceChain, addBlockToChain};
