@@ -164,6 +164,16 @@ const isValidNewBlock = (newBlock: Block, previousBlock: Block): boolean => {
     return true;
 }
 
+// The correct chain is not the longest chain, but the chain with the most cumulative difficulty.
+// i.e., the chain which required the most resources (= hashRate * time) produce
+// why 2^difficulty?
+const getAccumulatedDifficulty = (aBlockchain: Block[]): number => {
+    return aBlockchain
+        .map((block) => block.difficulty)
+        .map((difficulty) => Math.pow(2, difficulty))
+        .reduce((a, b) => a + b);
+}
+
 // Timestamp validation: to mitigate the attack where a false timestamp is introduced in order to manipulate the difficulty
 const isValidTimestamp = (newBlock: Block, previousBlock: Block): boolean => {
     // A block is valid if its timestamp is atmost 1 min in the future from the current time.
@@ -223,17 +233,13 @@ const isValidChain = (blockchainToValidate: Block[]): boolean => {
 }
 
 const replaceChain = (newBlocks: Block[]) => {
-    if (isValidChain(newBlocks) && newBlocks.length > blockchain.length){
+    if (isValidChain(newBlocks) && getAccumulatedDifficulty(newBlocks) > getAccumulatedDifficulty(getBlockchain())){
         console.log("received blockchain is valid. replacing current blockchain with received blockchain");
         blockchain = newBlocks;
-        // broadcastLatest();
+        broadcastLatest();
     } else {
         console.log("received blockchain invalid");
     }
 }
-
-// The correct chain is not the longest chain, but the chain with the most cumulative difficulty.
-// i.e., the chain which required the most resources (= hashRate * time) produce
-// why 2^difficulty?
 
 export {Block, getBlockchain, getLatestBlock, generateNextBlock, isValidBlockStructure, replaceChain, addBlockToChain};
