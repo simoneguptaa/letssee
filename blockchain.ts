@@ -22,11 +22,6 @@ class Block{
     }
 }
 
-const BLOCK_GENERATION_INTERVAL: number = 10; // (in seconds) defines how often a block should be found
-const DIFFICULTY_ADJUSTMENT_INTERVAL: number = 10; // (in blocks) defines how often the difficulty should adjust to the increasing or decreasing network hashrate
-// For every 10 blocks that is generated, we check if the time that took to generate those blocks are > or < the expected time.
-// Expected time: BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL
-
 // genesis block - the first block in the blockchain
 const genesisBlockIndex = 0;
 const genesisBlockData = "genesis block";
@@ -45,6 +40,38 @@ let blockchain: Block[] = [genesisBlock];
 
 const getBlockchain = (): Block[] => blockchain;
 const getLatestBlock = (): Block => blockchain[blockchain.length - 1];
+
+const BLOCK_GENERATION_INTERVAL: number = 10; // (in seconds) defines how often a block should be found
+const DIFFICULTY_ADJUSTMENT_INTERVAL: number = 10; // (in blocks) defines how often the difficulty should adjust to the increasing or decreasing network hashrate
+// For every 10 blocks that is generated, we check if the time that took to generate those blocks are > or < the expected time.
+// Expected time: BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL
+
+const getDifficulty = (aBlockchain: Block[]): number => {
+    const latestBlock: Block = aBlockchain[blockchain.length - 1];
+    if(latestBlock.index % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 && latestBlock.index !== 0){
+        return getAdjustedDifficulty(latestBlock, aBlockchain);
+    } else {
+        return latestBlock.difficulty;
+    }
+}
+
+const getAdjustedDifficulty = (latestBlock: Block, aBlockchain: Block[]): number => {
+    const prevAdjustmentBlock: Block = aBlockchain[blockchain.length - DIFFICULTY_ADJUSTMENT_INTERVAL];
+    const timeExpected: number = BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL;
+    const timeTaken: number = latestBlock.timestamp - prevAdjustmentBlock.timestamp;
+    
+    if(timeTaken < timeExpected / 2){ // Time taken is 2 times smaller than expected. Increase the difficulty.
+        return prevAdjustmentBlock.difficulty + 1;
+
+    } else if(timeTaken > timeExpected * 2){ // Time taken is 2 times greater than expected. Decrease the difficulty.
+        return prevAdjustmentBlock.difficulty - 1;
+
+    } else { // Best case: time taken matches exactly the time expected. CHECK: hashrate matches exactly the current difficulty.
+        return prevAdjustmentBlock.difficulty;
+    }
+}
+
+const getCurrentTimestamp = (): number => Math.round(new Date().getTime()/ 1000);
 
 const generateNextBlock = (blockData: string) => {
     const previousBlock: Block = getLatestBlock();
@@ -161,31 +188,6 @@ const findBlock = (index: number, previousHash: string, timestamp: number, data:
             return new Block(index, data, timestamp, previousHash, hash, difficulty, nonce);
         }
         nonce++;
-    }
-}
-
-const getDifficulty = (aBlockchain: Block[]): number => {
-    const latestBlock: Block = aBlockchain[blockchain.length - 1];
-    if(latestBlock.index % DIFFICULTY_ADJUSTMENT_INTERVAL === 0 && latestBlock.index !== 0){
-        return getAdjustedDifficulty(latestBlock, aBlockchain);
-    } else {
-        return latestBlock.difficulty;
-    }
-}
-
-const getAdjustedDifficulty = (latestBlock: Block, aBlockchain: Block[]): number => {
-    const prevAdjustmentBlock: Block = aBlockchain[blockchain.length - DIFFICULTY_ADJUSTMENT_INTERVAL];
-    const timeExpected: number = BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL;
-    const timeTaken: number = latestBlock.timestamp - prevAdjustmentBlock.timestamp;
-    
-    if(timeTaken < timeExpected / 2){ // Time taken is 2 times smaller than expected. Increase the difficulty.
-        return prevAdjustmentBlock.difficulty + 1;
-
-    } else if(timeTaken > timeExpected * 2){ // Time taken is 2 times greater than expected. Decrease the difficulty.
-        return prevAdjustmentBlock.difficulty - 1;
-
-    } else { // Best case: time taken matches exactly the time expected. CHECK: hashrate matches exactly the current difficulty.
-        return prevAdjustmentBlock.difficulty;
     }
 }
 
