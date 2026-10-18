@@ -1,4 +1,6 @@
 import sha256 from 'crypto-js/sha256.js';
+import { broadcastLatest } from './p2p.ts';
+import {hexToBinary} from './util.ts';
 
 class Block{
     public index: number; // block number in the chain
@@ -31,9 +33,11 @@ const genesisBlockData = "genesis block";
 const genesisBlockTimestamp = 1465154705;
 const genesisBlockPreviousHash: string | null = null;
 const genesisBlockHash = "816534932c2b7154836da6afc367695e6337db8a921823784c14378abed4f7d7";
+const genesisBlockDifficulty = 0;
+const genesisBlockNonce = 0;
 
 const genesisBlock: Block = new Block(
-    genesisBlockIndex, genesisBlockData, genesisBlockTimestamp, genesisBlockPreviousHash, genesisBlockHash, 0, 0
+    genesisBlockIndex, genesisBlockData, genesisBlockTimestamp, genesisBlockPreviousHash, genesisBlockHash, genesisBlockDifficulty, genesisBlockNonce
 );
 
 // for now, use an in-memory js array to store the blockchain
@@ -193,5 +197,9 @@ const isValidTimestamp = (newBlock: Block, previousBlock: Block): boolean => {
     // (A new block's timestamp cannot be 60 seconds or more behind the previous block's timestamp.)
     return (newBlock.timestamp < getCurrentTimestamp() + 60) && (newBlock.timestamp < previousBlock.timestamp - 60 );
 }
+
+// The correct chain is not the longest chain, but the chain with the most cumulative difficulty.
+// i.e., the chain which required the most resources (= hashRate * time) produce
+// why 2^difficulty?
 
 export {Block, getBlockchain, getLatestBlock, generateNextBlock, isValidBlockStructure, replaceChain, addBlockToChain};
