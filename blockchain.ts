@@ -75,23 +75,35 @@ const getCurrentTimestamp = (): number => Math.round(new Date().getTime()/ 1000)
 
 const generateNextBlock = (blockData: string) => {
     const previousBlock: Block = getLatestBlock();
+    const difficulty: number = getDifficulty(getBlockchain());
     const nextIndex: number = previousBlock.index + 1;
     const nextTimestamp: number = new Date().getTime() / 1000;
     const nextData: string = blockData;
-    const nextHash: string = calculateHash(nextIndex, nextData, nextTimestamp, previousBlock.hash);
-
-    const newBlock: Block = new Block(nextIndex, nextData, nextTimestamp, previousBlock.hash, nextHash);
-    blockchain.push(newBlock);
+    const newBlock: Block = findBlock(nextIndex, previousBlock.hash, nextTimestamp, nextData, difficulty);
+    addBlock(newBlock);
+    broadcastLatest();
     return newBlock;
+}
+
+// To find a valid block, increase the nonce until a valid hash is obtained.
+const findBlock = (index: number, previousHash: string, timestamp: number, data: string, difficulty: number): Block => {
+    let nonce = 0;
+    while(true){
+        const hash: string = calculateHash(index, previousHash, timestamp, data, difficulty, nonce);
+        if(hashMatchesDifficulty(hash, difficulty)){
+            return new Block(index, data, timestamp, previousHash, hash, difficulty, nonce);
+        }
+        nonce++;
+    }
 }
 
 // the block hash has nothing to do with mining yet, as there is no proof of work problem to solve
 // the deeper/ earlier the block is in a chain, the harder it is to modify it - hashes of all consecutive blocks must be changed
-const calculateHash = (index: number, data: string, timestamp: number, previousHash: string | null) => {
-    return sha256(index + data + timestamp + previousHash).toString();
+const calculateHash = (index: number, data: string, timestamp: number, previousHash: string | null, difficulty: number, nonce: number) => {
+    return sha256(index + data + timestamp + previousHash + difficulty + nonce).toString();
 }
 const calculateHashForBlock = (block: Block): string => {
-    return calculateHash(block.index, block.data, block.timestamp, block.previousHash);
+    return calculateHash(block.index, block.data, block.timestamp, block.previousHash, block.difficulty, block.nonce);
 }
 
 const addBlock = (newBlock: Block) => {
@@ -177,18 +189,6 @@ const hashMatchesDifficulty = (hash: string, difficulty: number): boolean => {
     const hashInBinary: string = hexToBinary(hash);
     const requiredPrefix: string = '0'.repeat(difficulty);
     return hashInBinary.startsWith(requiredPrefix);
-}
-
-// To find a valid block, increase the nonce until a valid hash is obtained.
-const findBlock = (index: number, previousHash: string, timestamp: number, data: string, difficulty: number): Block => {
-    let nonce = 0;
-    while(true){
-        const hash: string = calculateHash(index, previousHash, timestamp, data, difficulty, nonce);
-        if(hashMatchesDifficulty(hash, difficulty)){
-            return new Block(index, data, timestamp, previousHash, hash, difficulty, nonce);
-        }
-        nonce++;
-    }
 }
 
 // Timestamp validation: to mitigate the attack where a false timestamp is introduced in order to manipulate the difficulty
