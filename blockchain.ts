@@ -137,20 +137,71 @@ const isValidBlockStructure = (block: Block): boolean => {
 // previousHash of the new block must match the hash of the previous block
 // hash of the block itself must be valid
 
-const isValidNewBlock = (newBlock: Block, previousBlock: Block) => {
-    const newBlockCalculatedHash = calculateHash(newBlock.index, newBlock.data, newBlock.timestamp, newBlock.previousHash);
-    
+const isValidNewBlock = (newBlock: Block, previousBlock: Block): boolean => {
+    if(!isValidBlockStructure(newBlock)){
+        console.log("invalid structure");
+        return false;
+    }
     if(newBlock.index !== previousBlock.index + 1){
         console.log("index invalid");
         return false;
-    } else if(newBlock.previousHash !== previousBlock.hash){
+
+    } 
+    if(newBlock.previousHash !== previousBlock.hash){
         console.log("invalid previousHash");
-    } else if(newBlockCalculatedHash !== newBlock.hash){
-        console.log(typeof newBlock.hash + " " + typeof newBlockCalculatedHash);
-        console.log("invalid hash: " + newBlockCalculatedHash + " " + newBlock.hash);
+        return false;
+
+    }
+    if(!isValidTimestamp(newBlock, previousBlock)){
+        console.log("invalid timestamp");
+        return false;
+
+    }
+    if(!hasValidHash(newBlock)){
+        console.log("invalid hash");
         return false;
     }
     return true;
+}
+
+// Timestamp validation: to mitigate the attack where a false timestamp is introduced in order to manipulate the difficulty
+const isValidTimestamp = (newBlock: Block, previousBlock: Block): boolean => {
+    // A block is valid if its timestamp is atmost 1 min in the future from the current time.
+    // obtaining a block with a timestamp from the future - different computers participating in the blockchain will read different times.
+    // A block in the chain is valid, if the timestamp is at most 1 min in the past of the previous block.
+    // (A new block's timestamp cannot be 60 seconds or more behind the previous block's timestamp.)
+    return (newBlock.timestamp < getCurrentTimestamp() + 60) && (newBlock.timestamp < previousBlock.timestamp - 60 );
+}
+
+const hasValidHash = (block: Block): boolean => {
+    if (!hashMatchesBlockContent(block)){
+        console.log("invalid hash, got: " + block.hash);
+        return false;
+    }
+    if(!hashMatchesDifficulty(block.hash, block.difficulty)){
+        console.log("block difficulty not satisfied. expected: " + block.difficulty + "got: " + block.hash);
+        return false;
+    }
+    return true;
+}
+
+const hashMatchesBlockContent = (block: Block): boolean => {
+    const blockHash: string = calculateHashForBlock(block);
+    return blockHash === block.hash;
+}
+
+// The Proof of Work puzzle is to find a block hash, that contains a specific number of zeroes as its prefix.
+// The difficulty property defines how many prefixing zeroes the block hash must have.
+// In order to find a hash that satisfies the difficulty, we must be able to calculate different hashes with the same content of the block.
+// This is done by modifying the nonce parameter.
+const hashMatchesDifficulty = (hash: string, difficulty: number): boolean => {
+    const hashInBinary: string | null = hexToBinary(hash);
+    const requiredPrefix: string = '0'.repeat(difficulty);
+    if(hashInBinary){
+        return hashInBinary.startsWith(requiredPrefix);
+    }
+    console.log("hash in binary is a null string");
+    return false;    
 }
 
 const isValidChain = (blockchainToValidate: Block[]): boolean => {
@@ -179,25 +230,6 @@ const replaceChain = (newBlocks: Block[]) => {
     } else {
         console.log("received blockchain invalid");
     }
-}
-
-// The Proof of Work puzzle is to find a block hash, that contains a specific number of zeroes as its prefix.
-// The difficulty property defines how many prefixing zeroes the block hash must have.
-// In order to find a hash that satisfies the difficulty, we must be able to calculate different hashes with the same content of the block.
-// This is done by modifying the nonce parameter.
-const hashMatchesDifficulty = (hash: string, difficulty: number): boolean => {
-    const hashInBinary: string = hexToBinary(hash);
-    const requiredPrefix: string = '0'.repeat(difficulty);
-    return hashInBinary.startsWith(requiredPrefix);
-}
-
-// Timestamp validation: to mitigate the attack where a false timestamp is introduced in order to manipulate the difficulty
-const isValidTimestamp = (newBlock: Block, previousBlock: Block): boolean => {
-    // A block is valid if its timestamp is atmost 1 min in the future from the current time.
-    // obtaining a block with a timestamp from the future - different computers participating in the blockchain will read different times.
-    // A block in the chain is valid, if the timestamp is at most 1 min in the past of the previous block.
-    // (A new block's timestamp cannot be 60 seconds or more behind the previous block's timestamp.)
-    return (newBlock.timestamp < getCurrentTimestamp() + 60) && (newBlock.timestamp < previousBlock.timestamp - 60 );
 }
 
 // The correct chain is not the longest chain, but the chain with the most cumulative difficulty.
